@@ -42,34 +42,33 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Pause the view's session
         sceneView.session.pause()
     }
-    //MARK: Create Scene
-    func createScene() {
-        
-
-    }
     //MARK:- Touch Delegate
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
             let touchLocation = touch.location(in: sceneView)
             let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
             if let hitResult = results.first {
-                let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")!
-
-                if  let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true) {
-                    diceNode.position = SCNVector3(x: hitResult.worldTransform.columns.3.x, y: hitResult.worldTransform.columns.3.y + diceNode.boundingSphere.radius, z: hitResult.worldTransform.columns.3
-                .z)
-                    diceArray.append(diceNode)
-                    guard sceneView.scene.rootNode.addChildNode(diceNode) != nil else {fatalError()}
-                    
-                    rollAll()
-                    roll(dice: diceNode)
-                }
+                addDice(at: hitResult)
             }
     
         }
     }
+    //MARK: - Motion Delegate
     override func motionEnded(_ motion: UIEventSubtype, with event: UIEvent?) {
         rollAll()
+    }
+    //MARK:- Dice Helper Methods
+    func addDice(at location:ARHitTestResult) {
+        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")!
+        
+        if  let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true) {
+            diceNode.position = SCNVector3(x: location.worldTransform.columns.3.x, y: location.worldTransform.columns.3.y + diceNode.boundingSphere.radius, z: location.worldTransform.columns.3
+                .z)
+            diceArray.append(diceNode)
+            sceneView.scene.rootNode.addChildNode(diceNode)
+            rollAll()
+            roll(dice: diceNode)
+        }
     }
     func rollAll() {
         if diceArray.isEmpty == false {
@@ -89,6 +88,18 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                                duration: 0.5)
         )
     }
+    func createPlane(with planeAnchor: ARPlaneAnchor) -> SCNNode {
+        let scenePlane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z))
+        let planeNode = SCNNode()
+        planeNode.position = SCNVector3(x: planeAnchor.center.x, y: 0, z: planeAnchor.center.z)
+        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi/2, 1, 0, 0)
+        let gridMaterial = SCNMaterial()
+        gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
+        scenePlane.materials = [gridMaterial]
+        planeNode.geometry = scenePlane
+        return planeNode
+    }
+    //MARK:- Bar Button Action
     @IBAction func deleteAll(_ sender: UIBarButtonItem) {
         if diceArray.isEmpty == false {
             for dice in diceArray {
@@ -99,19 +110,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     @IBAction func rollAgain(_ sender: UIBarButtonItem) {
         rollAll()
     }
-    //MARK: Scene Delegate
+    //MARK:- Scene Delegate
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
-        if anchor is ARPlaneAnchor {
-            let planeAnchor = anchor as! ARPlaneAnchor
-            let scenePlane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z))
-            let planeNode = SCNNode()
-            planeNode.position = SCNVector3(x: planeAnchor.center.x, y: 0, z: planeAnchor.center.z)
-            planeNode.transform = SCNMatrix4MakeRotation(-Float.pi/2, 1, 0, 0)
-            let gridMaterial = SCNMaterial()
-            gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
-            scenePlane.materials = [gridMaterial]
-            planeNode.geometry = scenePlane
-            node.addChildNode(planeNode)
-        }
+            guard let planeAnchor = anchor as? ARPlaneAnchor else {return}
+            node.addChildNode(createPlane(with: planeAnchor))
     }
 }
