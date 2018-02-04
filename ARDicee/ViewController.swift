@@ -21,15 +21,12 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sceneView.delegate = self
         
         // Create a new scene
-        let sphere = SCNSphere(radius: 0.2)
-        let material = SCNMaterial()
-        material.diffuse.contents = UIImage(named: "art.scnassets/moon.jpg")
-        sphere.materials = [material]
-        let node = SCNNode()
-        node.position = SCNVector3(x: 0, y: 0.1, z: -0.5)
-        node.geometry = sphere
-        sceneView.scene.rootNode.addChildNode(node)
+       
+        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")!
+        let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true)
+        diceNode?.position = SCNVector3(x: 0, y: 0, z: -0.1)
         sceneView.autoenablesDefaultLighting = true
+        guard sceneView.scene.rootNode.addChildNode(diceNode!) != nil else {fatalError()}
     }
     
     override func viewWillAppear(_ animated: Bool) {
